@@ -54,6 +54,10 @@ function MemoryCard({ memory, idx, onFocus, focused }: MemoryCardProps) {
   useEffect(() => {
     if (videoRef.current) {
       if (focused || hovered) {
+        // Explicitly load video on demand since preload is set to none (saves massive payload)
+        if (videoRef.current.readyState === 0) {
+          videoRef.current.load();
+        }
         videoRef.current.play().catch(() => {});
       } else {
         videoRef.current.pause();
@@ -117,7 +121,7 @@ function MemoryCard({ memory, idx, onFocus, focused }: MemoryCardProps) {
                 muted 
                 loop 
                 playsInline 
-                preload="metadata"
+                preload="none"
                 className="w-full h-full object-cover select-none pointer-events-none" 
               />
               <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-500 animate-pulse" />

@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { memories } from '../data';
 import { AppState, Memory } from '../types';
-import { IntroScene } from './IntroScene';
-import { Planet } from './Planet';
 import { CosmicParticles } from './CosmicParticles';
 import { CameraRig } from './CameraRig';
-import { FinalScene } from './FinalScene';
-import { ConstellationSystem } from './ConstellationSystem';
-import { FloatingLetter, LetterSystem } from './LetterSystem';
+import { FloatingLetter } from './LetterSystem';
 import * as THREE from 'three';
+
+// Dynamic code-splitting to break massive WebGL components into lightweight chunks
+const IntroScene = lazy(() => import('./IntroScene').then(m => ({ default: m.IntroScene })));
+const Planet = lazy(() => import('./Planet').then(m => ({ default: m.Planet })));
+const FinalScene = lazy(() => import('./FinalScene').then(m => ({ default: m.FinalScene })));
+const ConstellationSystem = lazy(() => import('./ConstellationSystem').then(m => ({ default: m.ConstellationSystem })));
+const LetterSystem = lazy(() => import('./LetterSystem').then(m => ({ default: m.LetterSystem })));
 
 interface UniverseProps {
   appState: AppState;
@@ -81,50 +84,52 @@ export function Universe({
       <CosmicParticles />
       <CameraRig appState={appState} targetPosition={focusedPosition} />
 
-      {appState === 'intro' && <IntroScene onStart={onStartExploring} />}
+      <Suspense fallback={null}>
+        {appState === 'intro' && <IntroScene onStart={onStartExploring} />}
 
-      {appState === 'exploring' && (
-        <group>
-          {/* Central sun or gathering point */}
-          <mesh>
-            <sphereGeometry args={[2, 32, 32]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.1} />
-          </mesh>
-          
-          {memories.map((memory) => (
-            <Planet 
-              key={memory.id} 
-              memory={memory} 
-              onClick={onFocusMemory}
-              focused={focusedMemory?.id === memory.id}
+        {appState === 'exploring' && (
+          <group>
+            {/* Central sun or gathering point */}
+            <mesh>
+              <sphereGeometry args={[2, 32, 32]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.1} />
+            </mesh>
+            
+            {memories.map((memory) => (
+              <Planet 
+                key={memory.id} 
+                memory={memory} 
+                onClick={onFocusMemory}
+                focused={focusedMemory?.id === memory.id}
+              />
+            ))}
+
+            {/* Interactive constellation mapping nodes */}
+            <ConstellationSystem 
+              onUnlockAffirmation={onUnlockAffirmation}
+              activeConstellationId={activeConstellationId}
+              setActiveConstellationId={setActiveConstellationId}
             />
-          ))}
 
-          {/* Interactive constellation mapping nodes */}
-          <ConstellationSystem 
-            onUnlockAffirmation={onUnlockAffirmation}
-            activeConstellationId={activeConstellationId}
-            setActiveConstellationId={setActiveConstellationId}
+            {/* Drifting holographic letters system */}
+            <LetterSystem onOpenLetter={onOpenLetter} />
+          </group>
+        )}
+
+        {appState === 'finale' && (
+          <FinalScene 
+            onFocusMemory={onFocusMemory} 
+            focusedMemory={focusedMemory} 
           />
+        )}
+      </Suspense>
 
-          {/* Drifting holographic letters system */}
-          <LetterSystem onOpenLetter={onOpenLetter} />
-        </group>
-      )}
-
-      {appState === 'finale' && (
-        <FinalScene 
-          onFocusMemory={onFocusMemory} 
-          focusedMemory={focusedMemory} 
-        />
-      )}
-
-      {/* Cinematic Post-Processing */}
+      {/* Cinematic Post-Processing (Efficient shader pipeline - mipmap compilation bypassed) */}
       <EffectComposer multisampling={0}>
         <Bloom 
-          luminanceThreshold={0.2} 
-          mipmapBlur={!isMobile} 
-          intensity={isMobile ? 1.0 : 1.5} 
+          luminanceThreshold={0.5} 
+          mipmapBlur={false} 
+          intensity={isMobile ? 0.8 : 1.2} 
         />
         <Vignette eskil={false} offset={0.1} darkness={1.1} />
       </EffectComposer>

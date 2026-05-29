@@ -60,22 +60,23 @@ export function CosmicParticles() {
     return positions;
   }, [isMobile]);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const time = state.clock.getElapsedTime();
+    const dt = Math.min(delta, 0.1);
     const soundReact = audioReactivity.getLevel(time);
     const speedMultiplier = 1.0 + soundReact * 0.8;
 
     if (ref.current) {
-        ref.current.rotation.y = time * 0.03 * speedMultiplier;
+        ref.current.rotation.y += dt * 0.03 * speedMultiplier;
         ref.current.rotation.x = Math.sin(time * 0.1) * 0.05;
     }
     if (galaxyRef.current) {
         // Slow cinematic swirl
-        galaxyRef.current.rotation.y = time * 0.015 * speedMultiplier;
+        galaxyRef.current.rotation.y += dt * 0.015 * speedMultiplier;
         galaxyRef.current.rotation.z = Math.sin(time * 0.05) * 0.05;
     }
     if (petalsRef.current) {
-        petalsRef.current.rotation.y = time * 0.08 * speedMultiplier;
+        petalsRef.current.rotation.y += dt * 0.08 * speedMultiplier;
         petalsRef.current.position.y = Math.sin(time * 0.2) * 2;
     }
   });

@@ -10,13 +10,6 @@ export function AudioController({ appState }: AudioControllerProps) {
   const mainAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    mainAudio.current = new Audio('/audio/main.mp3');
-    mainAudio.current.loop = true;
-    mainAudio.current.volume = 0;
-    
-    // Register the audio element for audio visualization / breathing reactivity
-    audioReactivity.setAudioElement(mainAudio.current);
-
     // Audio unlock trigger for browser sandboxes
     const unlockUserAudio = () => {
       audioReactivity.resume();
@@ -24,7 +17,9 @@ export function AudioController({ appState }: AudioControllerProps) {
     window.addEventListener('pointerdown', unlockUserAudio);
 
     return () => {
-      mainAudio.current?.pause();
+      if (mainAudio.current) {
+        mainAudio.current.pause();
+      }
       window.removeEventListener('pointerdown', unlockUserAudio);
     };
   }, []);
@@ -53,6 +48,17 @@ export function AudioController({ appState }: AudioControllerProps) {
   };
 
   useEffect(() => {
+    // Initialise audio on-demand when moving away from intro state
+    if (appState !== 'intro' && !mainAudio.current) {
+      const audio = new Audio('/audio/main.mp3');
+      audio.loop = true;
+      audio.volume = 0;
+      mainAudio.current = audio;
+      
+      // Register for visualization/breathing reactivity
+      audioReactivity.setAudioElement(audio);
+    }
+
     // Play main audio directly starting from exploration phase
     if (appState === 'exploring') {
       if (mainAudio.current) fadeAudio(mainAudio.current, 0.5, 2000);
