@@ -10,8 +10,14 @@ interface FinalSceneProps {
   focusedMemory: Memory | null;
 }
 
+// Pre-allocated reusable vectors for zero-allocation performance in render loop
+const tempPosVec = new THREE.Vector3();
+const tempVectorA = new THREE.Vector3();
+const tempVectorB = new THREE.Vector3();
+const tempVectorC = new THREE.Vector3();
+
 // Analytical coordinate calculator for orbiting memories
-function getMemoryPosition(index: number, time: number) {
+function getMemoryPosition(index: number, time: number, out: THREE.Vector3 = tempPosVec) {
   // Distribute across 3 distinct shell levels to feel massive
   const r = 11 + (index % 3) * 5.0;
   // Dynamic orbiting speeds with alternating rotation directions
@@ -28,7 +34,7 @@ function getMemoryPosition(index: number, time: number) {
   const wave = Math.sin(time * 0.5 + index) * 1.5;
   const y = baseHeight + wave;
   
-  return new THREE.Vector3(x, y, z);
+  return out.set(x, y, z);
 }
 
 // 1. Hover/constellation responsive memory cards inside the galaxy network
@@ -57,7 +63,7 @@ function MemoryCard({ memory, idx, onFocus, focused }: MemoryCardProps) {
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
-    const pos = getMemoryPosition(idx, time);
+    const pos = getMemoryPosition(idx, time, tempPosVec);
     
     if (cardRef.current) {
       cardRef.current.position.copy(pos);
@@ -144,7 +150,7 @@ function ConstellationLines({ glowIntensity }: ConstellationLinesProps) {
         let index = 0;
         
         for (let i = 0; i < memories.length; i++) {
-          const posA = getMemoryPosition(i, time);
+          const posA = getMemoryPosition(i, time, tempVectorA);
           
           // Connection A: Gird lines locking each node to the central gravitation point
           array[index++] = posA.x;
@@ -156,7 +162,7 @@ function ConstellationLines({ glowIntensity }: ConstellationLinesProps) {
           
           // Connection B: Sequential ring bounds to adjacent nodes
           const nextIdx = (i + 1) % memories.length;
-          const posNext = getMemoryPosition(nextIdx, time);
+          const posNext = getMemoryPosition(nextIdx, time, tempVectorB);
           array[index++] = posA.x;
           array[index++] = posA.y;
           array[index++] = posA.z;
@@ -166,7 +172,7 @@ function ConstellationLines({ glowIntensity }: ConstellationLinesProps) {
           
           // Connection C: Visual network cross-links
           const crossIdx = (i + 4) % memories.length;
-          const posCross = getMemoryPosition(crossIdx, time);
+          const posCross = getMemoryPosition(crossIdx, time, tempVectorC);
           array[index++] = posA.x;
           array[index++] = posA.y;
           array[index++] = posA.z;
